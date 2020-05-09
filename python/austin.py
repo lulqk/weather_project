@@ -1,7 +1,8 @@
 import pandas as pd
 from scratchpad import get_location_and_station_per_city, location_and_station
 from weather import get_weather
-from api_keys import METADATA_PATH, AUSTIN_15_PATH
+from api_keys import METADATA_PATH, AUSTIN_15_PATH, CALI_15_PATH
+import time
 
 
 def trim_time(time):
@@ -35,7 +36,7 @@ def pipeline(df_city, df_metadata):
 
     # Pobranie stacji pogodowych i danych geolokalizacyjnych dla każdego miasta
     print("Pobieranie danych geolokalizacyjnych")
-    cities_meta = get_location_and_station_per_city()
+    cities_meta = get_location_and_station_per_city(working_city.local_15min.min())
 
     # Stworzenie kolumn i pobranie wartości 'station_id', 'latitude', 'longitude'
     print("Tworzenie kolumn ze stacja i lokalizacja")
@@ -53,7 +54,7 @@ def pipeline(df_city, df_metadata):
     weather_frame = working_city.apply(
         lambda x: pd.Series(
             get_weather(x['local_15min'], x['station_id']),
-            index=['temp_avg', 'wind_speed_avg', 'pressure_max', 'humidity_avg', 'wind_dir_avg']),
+            index=['temp_avg', 'wind_speed_avg','wind_dir_avg', 'pressure_max', 'humidity_avg']),
         axis=1,
         result_type='expand')
 
@@ -64,14 +65,18 @@ def pipeline(df_city, df_metadata):
 
 
 def pipeline_trial():
-    df_austin = pd.read_csv(AUSTIN_15_PATH)
+    start = time.time()
+    df = pd.read_csv(AUSTIN_15_PATH)
     df_metadata = pd.read_csv(METADATA_PATH)
 
-    x = df_austin[:1000].copy()
+    x = df[:1000].copy()
     result = pipeline(x, df_metadata)
     print(result)
     print(result.info())
     print(result.describe())
+    end = time.time()
+    print("\nUpłyneło: ", end - start)
+    result.to_csv('data/pipeline_trial_austin.csv')
 
 
 pipeline_trial()

@@ -38,10 +38,17 @@ def download_weather_data(date, station_id):
 
         with open(filepath, "w+") as outfile:
             json.dump(result, outfile)
+    else:
+        print("Station: " + station_id + " date: " + date + " code:" + str(r.status_code))
+
+    return r.status_code
 
 
 # Parametry pobierane z API: tempAvg, windspeedAvg, pressureMax, humidityAvg, winddirAvg
 def get_weather(timestamp, station_id):
+
+    if station_id == 'None':
+        return [np.nan, np.nan, np.nan, np.nan, np.nan]
 
     date = create_date(timestamp)
     path = "weather_data/" + date + "_" + station_id + ".json"

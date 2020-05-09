@@ -2,6 +2,7 @@ import requests
 from datetime import datetime
 import pandas as pd
 import os
+from weather import download_weather_data, create_date
 from api_keys import *
 
 
@@ -55,7 +56,18 @@ def geolocation_per_city(city, state):
     return [latitude, longitude]
 
 
-def get_station_by_geolocation(lat, lng):
+def get_user_data():
+    # Odczyt danych dotyczących użytkowników Pecan Street
+    if os.path.exists('data/user_data.csv'):
+        return pd.read_csv('data/user_data.csv')
+    else:
+        metadata = load_metadata()
+        df = pd.DataFrame(columns=['dataid', 'date_enrolled'])
+        df.dataid = metadata.dataid.unique().copy()
+        df.date_enrolled = df.apply(lambda row: metadata.loc[metadata['dataid'] == row['dataid'], 'date_enrolled'].values[0], axis=1)
+
+
+def get_valid_station_by_geolocation(lat, lng, min_date):
     geocode = str(lat) + ',' + str(lng)
     product = 'pws'
     frmt = 'json'
@@ -68,13 +80,17 @@ def get_station_by_geolocation(lat, lng):
 
     r = requests.get(url=url, params=payload, headers=headers)
     response = r.json()
-    index = response['location']['qcStatus'].index(1)
-    station_id = response['location']['stationId'][index]
+    stations = response['location']['qcStatus']
+    for index, value in enumerate(stations):
+        if value == 1:
+            station_id = response['location']['stationId'][index]
+            if download_weather_data(create_date(min_date), station_id) == 200:
+                return station_id
 
-    return station_id
+    return 'None'
 
 
-def get_location_and_station_per_city():
+def get_location_and_station_per_city(min_date):
 
     # sprawdzenie czy istnieje już plik z danymi geolokalizacyjnymi
     if os.path.exists('data/geolocation.csv'):
@@ -88,7 +104,7 @@ def get_location_and_station_per_city():
         df['state'] = df.apply(lambda row: metadata.loc[metadata['city'] == row['city'], 'state'].values[0], axis=1)
         for index, row in df.iterrows():
             row['lat'], row['lng'] = geolocation_per_city(row['city'], row['state'])
-            row['station_id'] = get_station_by_geolocation(row['lat'], row['lng'])
+            row['station_id'] = get_valid_station_by_geolocation(row['lat'], row['lng'], min_date)
 
         # Zapisanie danych do pliku
         df.to_csv('data/geolocation.csv')
@@ -98,3 +114,5 @@ def get_location_and_station_per_city():
 
 def location_and_station(city, state, cities_frame):
     return cities_frame.loc[(cities_frame['city']==city) & (cities_frame['state']==state), ['station_id', 'lat', 'lng']].values[0]
+
+
