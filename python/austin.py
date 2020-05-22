@@ -1,8 +1,19 @@
 import pandas as pd
-from scratchpad import get_location_and_station_per_city, location_and_station
+from scratchpad import get_location_and_station_per_city, location_and_station, check_if_holiday
 from weather import get_weather
-from api_keys import METADATA_PATH, AUSTIN_15_PATH, CALI_15_PATH
+from api_keys import METADATA_PATH, AUSTIN_15_PATH, CALI_15_PATH, NY_15_PATH
 import time
+from datetime import date
+
+
+STATES = {
+    'Texas':'TX',
+    'California': 'CA',
+    'Newy York': 'NY',
+    'Colorado': 'CO',
+    'Illinois': 'IL',
+    'Oklahoma': 'OK',
+    'Maryland': 'MD'}
 
 
 def trim_time(time):
@@ -49,6 +60,7 @@ def pipeline(df_city, df_metadata):
     working_city = pd.concat([working_city, location_frame], axis=1)
 
     print(working_city)
+
     # Stworznenie kolumn i pobranie wartości tempAvg, windspeedAvg, pressureMax, humidityAvg, winddirAvg
     print("Tworzenie kolumn z danymi pogodowymi")
     weather_frame = working_city.apply(
@@ -59,6 +71,11 @@ def pipeline(df_city, df_metadata):
         result_type='expand')
 
     working_city = pd.concat([working_city, weather_frame], axis=1)
+
+    # Dodanie kolumny, która sprawdza czy dzień był wolny od pracy
+    working_city['holiday'] = working_city.apply(
+        lambda row: check_if_holiday(row.local_15min.date(), STATES.get(row.state)), axis=1)
+
     print("Koniec")
 
     return working_city

@@ -1,9 +1,10 @@
 import requests
-from datetime import datetime
+from datetime import datetime, date
 import pandas as pd
 import os
 from weather import download_weather_data, create_date
 from api_keys import *
+import holidays
 
 
 def load_metadata():
@@ -116,3 +117,18 @@ def location_and_station(city, state, cities_frame):
     return cities_frame.loc[(cities_frame['city']==city) & (cities_frame['state']==state), ['station_id', 'lat', 'lng']].values[0]
 
 
+def check_if_holiday(date, state):
+    state_holidays =  holidays.CountryHoliday('US', state=state)
+    holiday = False
+    if date in state_holidays:
+        holiday = True
+    weekend = False
+    if date.weekday() > 4:
+        weekend = True
+
+    if holiday or weekend:
+        return True
+    else:
+        return False
+
+print(check_if_holiday(date(2014, 5, 24), 'CA'))
