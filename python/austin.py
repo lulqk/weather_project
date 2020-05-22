@@ -1,5 +1,5 @@
 import pandas as pd
-from scratchpad import get_location_and_station_per_city, location_and_station, check_if_holiday
+from scratchpad import get_location_and_station_per_city, location_and_station_per_dataid, check_if_holiday, get_location_and_station_per_dataid
 from weather import get_weather
 from api_keys import METADATA_PATH, AUSTIN_15_PATH, CALI_15_PATH, NY_15_PATH
 import time
@@ -47,13 +47,13 @@ def pipeline(df_city, df_metadata):
 
     # Pobranie stacji pogodowych i danych geolokalizacyjnych dla każdego miasta
     print("Pobieranie danych geolokalizacyjnych")
-    cities_meta = get_location_and_station_per_city(working_city.local_15min.min())
+    cities_meta = get_location_and_station_per_dataid(df_metadata, working_city)
 
     # Stworzenie kolumn i pobranie wartości 'station_id', 'latitude', 'longitude'
     print("Tworzenie kolumn ze stacja i lokalizacja")
     location_frame = working_city.apply(
         lambda x: pd.Series(
-            location_and_station(x['city'], x['state'], cities_meta), index=['station_id', 'latitude', 'longitude']),
+            location_and_station_per_dataid(str(x['local_15min'].date()),cities_meta), index=['station_id', 'latitude', 'longitude']),
         axis=1,
         result_type='expand')
 
@@ -65,14 +65,14 @@ def pipeline(df_city, df_metadata):
     print("Tworzenie kolumn z danymi pogodowymi")
     weather_frame = working_city.apply(
         lambda x: pd.Series(
-            get_weather(x['local_15min'], x['station_id']),
+            get_weather(x['local_15min'], x['station_id'], x['latitude'], x['longitude']),
             index=['temp_avg', 'wind_speed_avg','wind_dir_avg', 'pressure_max', 'humidity_avg']),
         axis=1,
         result_type='expand')
 
     working_city = pd.concat([working_city, weather_frame], axis=1)
 
-    # Dodanie kolumny, która sprawdza czy dzień był wolny od pracy
+    # Dodanie kolumny, która sprawdza czy dzień był wolny od pracy (weekendy i święta)
     working_city['holiday'] = working_city.apply(
         lambda row: check_if_holiday(row.local_15min.date(), STATES.get(row.state)), axis=1)
 
@@ -81,19 +81,33 @@ def pipeline(df_city, df_metadata):
     return working_city
 
 
-def pipeline_trial():
+def pipeline_per_house(df, df_metadata):
     start = time.time()
-    df = pd.read_csv(AUSTIN_15_PATH)
-    df_metadata = pd.read_csv(METADATA_PATH)
-
-    x = df[:1000].copy()
-    result = pipeline(x, df_metadata)
-    print(result)
+    result = pipeline(df, df_metadata)
     print(result.info())
     print(result.describe())
     end = time.time()
     print("\nUpłyneło: ", end - start)
-    result.to_csv('data/pipeline_trial_austin.csv')
+    return result
 
 
-pipeline_trial()
+def main(dataset):
+    start = time.time()
+    df = pd.read_csv(dataset)
+    df_metadata = pd.read_csv(METADATA_PATH)
+    ids = df.dataid.unique().copy()
+    done = []
+
+    for id in ids:
+        if id in done:
+            pass
+        else:
+            print("Tworzenie dataframe dla ID: ", id)
+            sub_df = df.loc[df.dataid == id].copy()
+            result = pipeline_per_house(sub_df, df_metadata)
+            result.to_csv('data/austin/pipeline_' + str(id) + '_austin.csv')
+    end = time.time()
+    print("\nCałkowity czas: ", end - start)
+
+
+main(AUSTIN_15_PATH)

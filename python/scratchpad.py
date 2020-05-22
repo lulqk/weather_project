@@ -12,35 +12,6 @@ def load_metadata():
     return df_metadata
 
 
-# Parametry pobierane z API: tempAvg, windspeedAvg, pressureMax, humidityAvg, winddirAvg
-def get_weather(timestamp, station_id):
-    print(timestamp, station_id)
-    frmt = 'json'
-    units = 'm'
-    api_key = WEATHER_API
-    date = str(timestamp.year) + str(timestamp.month) + str(timestamp.day)
-    url = 'https://api.weather.com/v2/pws/history/hourly'
-
-    payload = {'stationId': station_id, 'format': frmt, 'units': units, 'date': date, 'apiKey': api_key}
-
-    headers = {'Accept-Encoding': 'gzip, deflate, br'}
-
-    r = requests.get(url=url, params=payload, headers=headers)
-    result = r.json()['observations']
-    for observation in result:
-        hour = datetime.strptime(observation['obsTimeLocal'], '%Y-%m-%d %H:%M:%S').hour
-        if hour == timestamp.hour:
-            temp_avg = observation['metric']['tempAvg']
-            wind_speed_avg = observation['metric']['windspeedAvg']
-            wind_dir_avg = observation['winddirAvg']
-            pressure_max = observation['metric']['pressureMax']
-            humidity_avg = observation['humidityAvg']
-
-            return [temp_avg, wind_speed_avg, wind_dir_avg, pressure_max, humidity_avg]
-
-    return [0, 0, 0, 0, 0]
-
-
 def geolocation_per_city(city, state):
     location = city + ' ' + state
     api_key = GOOGLE_API
@@ -131,4 +102,63 @@ def check_if_holiday(date, state):
     else:
         return False
 
-print(check_if_holiday(date(2014, 5, 24), 'CA'))
+
+def to_date(timestamp):
+    return timestamp.date()
+
+
+def get_valid_station_by_geolocation_per_dataid(lat, lng, date):
+    geocode = str(lat) + ',' + str(lng)
+    product = 'pws'
+    frmt = 'json'
+    api_key = WEATHER_API
+    payload = {'geocode': geocode, 'product': product, 'format': frmt, 'apiKey': api_key}
+
+    headers = {'Accept-Encoding': 'gzip, deflate, br'}
+
+    url = 'https://api.weather.com/v3/location/near'
+
+    r = requests.get(url=url, params=payload, headers=headers)
+    response = r.json()
+    stations = response['location']['qcStatus']
+    for index, value in enumerate(stations):
+        if value == 1:
+            station_id = response['location']['stationId'][index]
+            if download_weather_data(str(date).replace('-', ''), station_id) == 200:
+                return station_id
+
+    return 'None'
+
+
+def get_location_and_station_per_dataid(metadata, id_full_df):
+
+    dataid = id_full_df.dataid.values[0]
+
+    # sprawdzenie czy istnieje już plik z danymi geolokalizacyjnymi
+    if os.path.exists('data/geolocation'+str(dataid)+'.csv'):
+        return pd.read_csv('data/geolocation'+str(dataid)+'.csv')
+    else:
+        # Utworzenie dataframe zawierającego date, nazwe miasta, stan, dlugość i szerokość gograficzną, id stacji pogodowej
+        df = pd.DataFrame(columns=['date', 'city', 'state', 'lat', 'lng', 'station_id'])
+        # Kopia i odzyskanie unikalnych dat z pliku źródłowego
+        dates = id_full_df.local_15min.copy()
+        dates = dates.apply(to_date)
+        df.date = dates.unique()
+        # Pobranie nazwy miasta i stanu
+        city = metadata.loc[metadata.dataid == dataid].city.values[0]
+        state = metadata.loc[metadata.dataid == dataid].state.values[0]
+        # Uzupełnienie dataframe
+        for index, row in df.iterrows():
+            row['city'] = city
+            row['state'] = state
+            row['lat'], row['lng'] = geolocation_per_city(row['city'], row['state'])
+            row['station_id'] = get_valid_station_by_geolocation_per_dataid(row['lat'], row['lng'], row['date'])
+
+        # Zapisanie danych do pliku
+        df.to_csv('data/geolocation'+str(dataid)+'.csv')
+
+        return df
+
+
+def location_and_station_per_dataid(date, cities_frame):
+    return cities_frame.loc[cities_frame['date']==date, ['station_id', 'lat', 'lng']].values[0]
