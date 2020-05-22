@@ -3,7 +3,6 @@ import json
 import os
 from datetime import datetime
 import numpy as np
-import pandas as pd
 from api_keys import *
 
 
@@ -59,7 +58,7 @@ def get_new_station(date, lat, lng):
     return 'None'
 
 
-def download_weather_data(date, station_id, lat=0, lng=0):
+def download_weather_data(date, station_id):
     r = get_weather_data(date, station_id)
 
     if r.status_code == 200:
@@ -73,24 +72,12 @@ def download_weather_data(date, station_id, lat=0, lng=0):
             print("Klucz API został zablokowany")
         else:
             print("Station: " + station_id + " date: " + date + " code:" + str(r.status_code))
-        # new_result = get_new_station(date, lat, lng).json()
-        # new_station = new_result['observations'][0]['stationID']
-        #
-        # filepath = "weather_data/" + date + "_" + new_station + ".json"
-        #
-        # with open(filepath, "w+") as outfile:
-        #     json.dump(new_result, outfile)
-        #
-        # geolocation = pd.read_csv('data/geolocation.csv')
-        # geolocation.loc[geolocation['station_id']==station_id, 'station_id'] = new_station
-        # geolocation.to_csv('data/geolocation.csv', index=False)
-        # print("New station: " + new_station + "for date: " + date)
 
     return r.status_code
 
 
 # Parametry pobierane z API: tempAvg, windspeedAvg, pressureMax, humidityAvg, winddirAvg
-def get_weather(timestamp, station_id, lat, lng):
+def get_weather(timestamp, station_id):
 
     if station_id == 'None':
         return [np.nan, np.nan, np.nan, np.nan, np.nan]
@@ -99,7 +86,7 @@ def get_weather(timestamp, station_id, lat, lng):
     path = "weather_data/" + date + "_" + station_id + ".json"
 
     if not os.path.exists(path):
-        download_weather_data(date, station_id, lat=lat, lng=lng)
+        download_weather_data(date, station_id)
 
     try:
         with open(path, 'r') as file:
