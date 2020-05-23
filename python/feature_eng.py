@@ -9,11 +9,11 @@ def get_hour(time):
 
 def get_polynomial_features(data):
     poly = PolynomialFeatures(degree=3, include_bias=False)
-    features_to_transform = data[['temp_avg', 'wind_speed_avg', 'wind_dir_avg', 'pressure_max', 'humidity_avg']].copy()
+    features_to_transform = data[['temp_avg', 'wind_speed_avg', 'wind_dir_avg', 'pressure_max', 'humidity_avg', 'hour']].copy()
     features_transformed = poly.fit_transform(features_to_transform)
-    col_names = poly.get_feature_names(['temp_avg', 'wind_speed_avg', 'wind_dir_avg', 'pressure_max', 'humidity_avg'])
+    col_names = poly.get_feature_names(['temp_avg', 'wind_speed_avg', 'wind_dir_avg', 'pressure_max', 'humidity_avg', 'hour'])
     new_features = pd.DataFrame(features_transformed, columns=col_names)
-    new_features = new_features.drop(['temp_avg', 'wind_speed_avg', 'wind_dir_avg', 'pressure_max', 'humidity_avg'], axis=1)
+    new_features = new_features.drop(['temp_avg', 'wind_speed_avg', 'wind_dir_avg', 'pressure_max', 'humidity_avg', 'hour'], axis=1)
     new_df = pd.concat([data, new_features], axis=1)
 
     return new_df
@@ -63,4 +63,4 @@ def feature_eng_dataset(dataset):
     data.to_csv('data/austin/best_features_' + str(dataid) + '.csv', index=False)
 
 
-feature_eng_dataset(pd.read_csv('data/austin/pipeline_661_austin.csv'))
+feature_eng_dataset(pd.read_csv('data/austin/pipeline_2335_austin.csv'))

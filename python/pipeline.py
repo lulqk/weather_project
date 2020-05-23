@@ -3,6 +3,7 @@ from scratchpad import location_and_station_per_dataid, check_if_holiday, get_lo
 from weather import get_weather
 from api_keys import METADATA_PATH, AUSTIN_15_PATH, CALI_15_PATH, NY_15_PATH
 import time
+from feature_eng import feature_eng_dataset
 
 
 STATES = {
@@ -105,6 +106,7 @@ def main(dataset):
             sub_df = df.loc[df.dataid == dataid].copy()
             result = pipeline_per_house(sub_df, df_metadata)
             result.to_csv('data/austin/pipeline_' + str(dataid) + '_austin.csv')
+            feature_eng_dataset(result)
     end = time.time()
     print("\nCałkowity czas: ", end - start)
 

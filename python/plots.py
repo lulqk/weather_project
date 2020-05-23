@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 
-def get_correlation_plot(data, name='correlation_matrix.png'):
+def get_correlation_plot(data, name='correlation_matrix'):
     # Stworzenie macierzy korelacji
     corr_matrix = data.corr()
     # Stworzenie i zapisanie do pliku heatmapy korelacji
@@ -15,6 +15,11 @@ def get_correlation_plot(data, name='correlation_matrix.png'):
         corr_plot = sns.heatmap(corr_matrix.round(2), mask=mask, square=True, annot=True, linewidths=.5, ax=ax)
     fig = corr_plot.get_figure()
     fig.savefig('data/plots/' + name + '.png')  # zapisanie wykresu do pliku
+
+
+def get_pairplot(data, name='pair_plot'):
+    pp = sns.pairplot(data)
+    pp.savefig('data/plots/' + name + '.png')
 
 
 def get_histograms(data, dataid):
@@ -39,8 +44,6 @@ def get_scatter_plots(data, dataid):
         plt.close()
 
 
-data = pd.read_csv('data/austin/pipeline_661_austin.csv')
-dataid = data.dataid[0]
-data = data.drop(['Unnamed: 0', 'dataid'], axis=1)
+data = pd.read_csv('data/austin/best_features_661.csv')
 
-get_scatter_plots(data, dataid)
+get_pairplot(data)
