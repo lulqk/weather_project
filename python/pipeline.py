@@ -1,13 +1,12 @@
 import pandas as pd
-from scratchpad import get_location_and_station_per_city, location_and_station_per_dataid, check_if_holiday, get_location_and_station_per_dataid
+from scratchpad import location_and_station_per_dataid, check_if_holiday, get_location_and_station_per_dataid
 from weather import get_weather
 from api_keys import METADATA_PATH, AUSTIN_15_PATH, CALI_15_PATH, NY_15_PATH
 import time
-from datetime import date
 
 
 STATES = {
-    'Texas':'TX',
+    'Texas': 'TX',
     'California': 'CA',
     'Newy York': 'NY',
     'Colorado': 'CO',
@@ -16,8 +15,8 @@ STATES = {
     'Maryland': 'MD'}
 
 
-def trim_time(time):
-    return time[:-3]
+def trim_time(val):
+    return val[:-3]
 
 
 def pipeline(df_city, df_metadata):
@@ -65,8 +64,8 @@ def pipeline(df_city, df_metadata):
     print("Tworzenie kolumn z danymi pogodowymi")
     weather_frame = working_city.apply(
         lambda x: pd.Series(
-            get_weather(x['local_15min'], x['station_id'], x['latitude'], x['longitude']),
-            index=['temp_avg', 'wind_speed_avg','wind_dir_avg', 'pressure_max', 'humidity_avg']),
+            get_weather(x['local_15min'], x['station_id']),
+            index=['temp_avg', 'wind_speed_avg', 'wind_dir_avg', 'pressure_max', 'humidity_avg']),
         axis=1,
         result_type='expand')
 
@@ -96,16 +95,16 @@ def main(dataset):
     df = pd.read_csv(dataset)
     df_metadata = pd.read_csv(METADATA_PATH)
     ids = df.dataid.unique().copy()
-    done = []
+    done = [661, 1642, 2335]
 
-    for id in ids:
-        if id in done:
+    for dataid in ids:
+        if dataid in done:
             pass
         else:
-            print("Tworzenie dataframe dla ID: ", id)
-            sub_df = df.loc[df.dataid == id].copy()
+            print("Tworzenie dataframe dla ID: ", dataid)
+            sub_df = df.loc[df.dataid == dataid].copy()
             result = pipeline_per_house(sub_df, df_metadata)
-            result.to_csv('data/austin/pipeline_' + str(id) + '_austin.csv')
+            result.to_csv('data/austin/pipeline_' + str(dataid) + '_austin.csv')
     end = time.time()
     print("\nCałkowity czas: ", end - start)
 
