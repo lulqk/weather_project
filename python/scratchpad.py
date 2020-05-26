@@ -64,34 +64,60 @@ def get_valid_station_by_geolocation_per_dataid(lat, lng, date):
     return 'None'
 
 
+def create_geolocation_frame(dataid, metadata, id_full_df, lenght=0, exists=False):
+    #Odczyt istniejącej bazy jeśli istnieje
+    if exists:
+        df = pd.read_csv('data/geolocation' + str(dataid) + '.csv', index_col=0)
+    else:
+        # Utworzenie dataframe zawierającego date, nazwe miasta, stan, dlugość i szerokość gograficzną, id stacji pogodowej
+        df = pd.DataFrame(columns=['date', 'city', 'state', 'lat', 'lng', 'station_id'])
+        # Utworzenie pustego csv z headerami
+        df.to_csv('data/geolocation' + str(dataid) + '.csv')
+    # Stworzenie pomocniczego df
+    support_df = pd.DataFrame(columns=['date', 'city', 'state', 'lat', 'lng', 'station_id'])
+    # Kopia i odzyskanie unikalnych dat z pliku źródłowego
+    dates = id_full_df.local_15min.copy()
+    dates = dates.apply(to_date)
+    support_df.date = dates.unique()
+    support_df = support_df[lenght:]
+    # Pobranie nazwy miasta i stanu
+    support_df['city'] = metadata.loc[metadata.dataid == dataid].city.values[0]
+    support_df['state'] = metadata.loc[metadata.dataid == dataid].state.values[0]
+    support_df['lat'], support_df['lng'] =  geolocation_per_city(support_df['city'][lenght], support_df['state'][lenght])
+    # Uzupełnienie dataframe
+    for index, row in support_df.iterrows():
+        row['station_id'] = get_valid_station_by_geolocation_per_dataid(row['lat'], row['lng'], row['date'])
+        pd.DataFrame(row).T.to_csv('data/geolocation' + str(dataid) + '.csv', mode='a', header=False)
+
+
+    # Zapisanie danych do pliku
+    #df.to_csv('data/geolocation' + str(dataid) + '.csv')
+    # final_df = df.append(support_df, ignore_index=True)
+    # print('final_df', final_df.shape)
+    # print(final_df)
+    # if exists is False:
+    return pd.read_csv('data/geolocation' + str(dataid) + '.csv', index_col=0)
+    # else:
+    #     return final_df
+
+
 def get_location_and_station_per_dataid(metadata, id_full_df):
 
     dataid = id_full_df.dataid.values[0]
 
     # sprawdzenie czy istnieje już plik z danymi geolokalizacyjnymi
     if os.path.exists('data/geolocation'+str(dataid)+'.csv'):
-        return pd.read_csv('data/geolocation'+str(dataid)+'.csv')
-    else:
-        # Utworzenie dataframe zawierającego date, nazwe miasta, stan, dlugość i szerokość gograficzną, id stacji pogodowej
-        df = pd.DataFrame(columns=['date', 'city', 'state', 'lat', 'lng', 'station_id'])
-        # Kopia i odzyskanie unikalnych dat z pliku źródłowego
+        geoloc =  pd.read_csv('data/geolocation'+str(dataid)+'.csv', index_col=0)
         dates = id_full_df.local_15min.copy()
         dates = dates.apply(to_date)
-        df.date = dates.unique()
-        # Pobranie nazwy miasta i stanu
-        city = metadata.loc[metadata.dataid == dataid].city.values[0]
-        state = metadata.loc[metadata.dataid == dataid].state.values[0]
-        # Uzupełnienie dataframe
-        for index, row in df.iterrows():
-            row['city'] = city
-            row['state'] = state
-            row['lat'], row['lng'] = geolocation_per_city(row['city'], row['state'])
-            row['station_id'] = get_valid_station_by_geolocation_per_dataid(row['lat'], row['lng'], row['date'])
-
-        # Zapisanie danych do pliku
-        df.to_csv('data/geolocation'+str(dataid)+'.csv')
-
-        return df
+        dates = dates.unique()
+        print(len(geoloc), len(dates))
+        if len(geoloc) == len(dates):
+            return geoloc
+        else:
+            return create_geolocation_frame(dataid, metadata, id_full_df, lenght=len(geoloc), exists=True)
+    else:
+        return create_geolocation_frame(dataid, metadata, id_full_df)
 
 
 def location_and_station_per_dataid(date, cities_frame):

@@ -48,6 +48,7 @@ def pipeline(df_city, df_metadata):
     # Pobranie stacji pogodowych i danych geolokalizacyjnych dla każdego miasta
     print("Pobieranie danych geolokalizacyjnych")
     cities_meta = get_location_and_station_per_dataid(df_metadata, working_city)
+    print(cities_meta)
 
     # Stworzenie kolumn i pobranie wartości 'station_id', 'latitude', 'longitude'
     print("Tworzenie kolumn ze stacja i lokalizacja")
@@ -91,7 +92,7 @@ def pipeline_per_house(df, df_metadata):
     return result
 
 
-def main(dataset):
+def main(dataset, name):
     start = time.time()
     df = pd.read_csv(dataset)
     df_metadata = pd.read_csv(METADATA_PATH)
@@ -105,10 +106,11 @@ def main(dataset):
             print("Tworzenie dataframe dla ID: ", dataid)
             sub_df = df.loc[df.dataid == dataid].copy()
             result = pipeline_per_house(sub_df, df_metadata)
-            result.to_csv('data/austin/pipeline_' + str(dataid) + '_austin.csv')
-            feature_eng_dataset(result)
+            result = result.reset_index()
+            result.to_csv('data/' + name + '/pipeline_' + str(dataid) + '_' + name + '.csv')
+            feature_eng_dataset(result, name)
     end = time.time()
     print("\nCałkowity czas: ", end - start)
 
 
-main(AUSTIN_15_PATH)
+main(AUSTIN_15_PATH, 'austin')

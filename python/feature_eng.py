@@ -29,7 +29,7 @@ def select_best_features(dataset):
     # Przeskalowanie zmiennej na wartości od 0 do 1
     dt_grid_scaled = MinMaxScaler().fit_transform(dt_grid)
 
-    dt_numeric = data.drop(['Unnamed: 0', 'dataid', 'local_15min', 'city', 'state',
+    dt_numeric = data.drop(['dataid', 'local_15min', 'city', 'state',
                             'station_id', 'latitude', 'longitude', 'grid'], axis=1).copy()
     dt_numeric_scaled = MinMaxScaler().fit_transform(dt_numeric)
 
@@ -50,17 +50,20 @@ def select_best_features(dataset):
     return pd.concat([dt_descriptive, best_features_set, dataset.grid.copy()], axis=1)
 
 
-def feature_eng_dataset(dataset):
-    dataid = dataset.dataid[0]
+def feature_eng_dataset(dataset, name):
+    print("Dataset")
+    print(dataset)
+    dataid = dataset.dataid.iloc[0]
     # Usunięcie N/A
     data = dataset.dropna()
     # Dodanie kolumny z godziną pomiaru
     data['hour'] = data.local_15min.apply(get_hour)
     # Utworzenie zmiennych wielomianowych na podstawie numerycznych zmiennych pogodowych
+    print("Pre poly")
+    print(data)
     data = get_polynomial_features(data)
+    print("Post poly")
+    print(data)
     # Wybranie 10 najlepszych zmiennych numerycznych
     data = select_best_features(data)
-    data.to_csv('data/austin/best_features_' + str(dataid) + '.csv', index=False)
-
-
-feature_eng_dataset(pd.read_csv('data/austin/pipeline_2335_austin.csv'))
+    data.to_csv('data/' + name + '/best_features_' + str(dataid) + '.csv', index=False)

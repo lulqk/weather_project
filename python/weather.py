@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 import numpy as np
 from api_keys import *
+import time
 
 
 def create_date(timestamp):
@@ -21,6 +22,7 @@ def create_date(timestamp):
 
 
 def get_weather_data(date, station_id):
+    time.sleep(4)
     frmt = 'json'
     units = 'm'
     api_key = WEATHER_API
@@ -59,6 +61,10 @@ def get_new_station(date, lat, lng):
 
 
 def download_weather_data(date, station_id):
+    # tmp = get_weather_data(date, 'KCASANDI97')
+    # if tmp.status_code == 200:
+    #     r = tmp
+    # else:
     r = get_weather_data(date, station_id)
 
     if r.status_code == 200:
